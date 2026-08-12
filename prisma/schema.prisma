@@ -1,0 +1,35 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Album {
+  id          String   @id @default(cuid())
+  spotifyId   String   @unique
+  title       String
+  artist      String
+  imageUrl    String?
+  releaseDate String?
+  spotifyUrl  String?
+  rating      Int?
+  createdAt   DateTime @default(now())
+  listens     Listen[]
+
+  @@index([createdAt])
+}
+
+model Listen {
+  id         String   @id @default(cuid())
+  albumId    String
+  album      Album    @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  listenedAt DateTime
+  note       String?
+  createdAt  DateTime @default(now())
+
+  @@index([albumId])
+  @@index([listenedAt])
+}

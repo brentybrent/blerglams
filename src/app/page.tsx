@@ -39,7 +39,14 @@ export default function HomePage() {
       <NavBar />
       <main className="max-w-5xl mx-auto px-4 py-6 space-y-6">
         <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-          <h1 className="text-xl font-semibold">Your library</h1>
+          <div>
+            <h1 className="text-xl font-semibold">2026 Listens</h1>
+            {albums && (
+              <p className="text-sm text-muted">
+                {albums.length} {albums.length === 1 ? "album" : "albums"}
+              </p>
+            )}
+          </div>
           <div className="flex gap-2">
             <input
               value={filter}

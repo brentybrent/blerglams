@@ -26,7 +26,7 @@ export default function NavBar() {
         </Link>
         <div className="flex flex-wrap items-center gap-2">
           <Link href="/" className={linkClass("/")}>
-            Library
+            2026 Listens
           </Link>
           <Link href="/saved" className={linkClass("/saved")}>
             Saved

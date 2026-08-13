@@ -25,10 +25,15 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     }
   }
 
+  if (body.status !== undefined && body.status !== "LIBRARY" && body.status !== "SAVED") {
+    return NextResponse.json({ error: "Status must be LIBRARY or SAVED." }, { status: 400 });
+  }
+
   const album = await prisma.album.update({
     where: { id },
     data: {
       rating: body.rating === null ? null : body.rating !== undefined ? Number(body.rating) : undefined,
+      status: body.status,
     },
     include: { listens: { orderBy: { listenedAt: "desc" } } },
   });

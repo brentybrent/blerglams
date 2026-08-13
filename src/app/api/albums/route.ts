@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import type { AlbumStatus } from "@prisma/client";
 
 export async function GET(req: NextRequest) {
   const sort = req.nextUrl.searchParams.get("sort") ?? "added";
+  const statusParam = req.nextUrl.searchParams.get("status");
+  const status: AlbumStatus | undefined =
+    statusParam === "saved" ? "SAVED" : statusParam === "library" ? "LIBRARY" : undefined;
 
   const orderBy =
     sort === "rating"
@@ -14,6 +18,7 @@ export async function GET(req: NextRequest) {
           : [{ createdAt: "desc" as const }];
 
   const albums = await prisma.album.findMany({
+    where: status ? { status } : undefined,
     orderBy,
     include: {
       listens: { orderBy: { listenedAt: "desc" } },
@@ -29,6 +34,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing required album fields." }, { status: 400 });
   }
 
+  const status: AlbumStatus = body.status === "SAVED" ? "SAVED" : "LIBRARY";
+
   const existing = await prisma.album.findUnique({
     where: { spotifyId: body.spotifyId },
     include: { listens: { orderBy: { listenedAt: "desc" } } },
@@ -42,9 +49,11 @@ export async function POST(req: NextRequest) {
       spotifyId: body.spotifyId,
       title: body.title,
       artist: body.artist ?? "Unknown artist",
+      artistId: body.artistId ?? null,
       imageUrl: body.imageUrl ?? null,
       releaseDate: body.releaseDate ?? null,
       spotifyUrl: body.spotifyUrl ?? null,
+      status,
     },
     include: { listens: true },
   });

@@ -1,6 +1,13 @@
 # blerglams
 
-A personal album tracker: log the albums you listen to, rate them 1–10, and note when you listened. Search Spotify's catalog to add albums with artwork pulled in automatically. Works as an installable web app (PWA) on your phone, iPad, and computer.
+A personal album tracker: log the albums you listen to, rate them 1–10, and note when you listened. Search Spotify's catalog to add albums with artwork pulled in automatically, save albums you want to get to later, and get recommendations based on artists behind the albums you've rated highly. Works as an installable web app (PWA) on your phone, iPad, and computer.
+
+## Features
+
+- **Library** (`/`) — everything you've logged, sortable by recently added, highest rated, title, or release date
+- **Saved** (`/saved`) — a wishlist of albums you want to listen to but haven't yet; one tap moves an album to your library once you've heard it
+- **Recommended** (`/recommendations`) — more albums from the artists behind whatever you've rated 7 or higher, pulled live from Spotify's catalog, excluding anything already in your library or saved list
+- **Add album** (`/search`) — search Spotify's full catalog and either add straight to your library or save for later
 
 ## Stack
 
@@ -69,6 +76,31 @@ All devices share the same library since it's backed by one database — add an 
 
 ---
 
+## Updating an existing deployment's database
+
+Whenever the app's data model changes (like the Saved/Recommendations feature below, which added a `status` field and an `artistId` field to albums), your Neon database needs the same one-time update the initial setup used. Pick whichever of these you did before:
+
+**Option A — Neon SQL Editor (no install needed):** go to your Neon project → **SQL Editor**, paste this, and run it:
+
+```sql
+CREATE TYPE "AlbumStatus" AS ENUM ('LIBRARY', 'SAVED');
+
+ALTER TABLE "Album" ADD COLUMN "artistId" TEXT;
+ALTER TABLE "Album" ADD COLUMN "status" "AlbumStatus" NOT NULL DEFAULT 'LIBRARY';
+
+CREATE INDEX "Album_status_idx" ON "Album"("status");
+```
+
+**Option B — from your terminal:**
+
+```bash
+git pull
+npm install
+DATABASE_URL="<your Neon connection string>" npx prisma db push
+```
+
+Either way, all your existing albums default to `status = LIBRARY`, so nothing already in your library moves or changes — this only adds the new Saved/Recommendations capability going forward.
+
 ## Local development
 
 ```bash
@@ -82,11 +114,16 @@ You'll need a Postgres instance to point `DATABASE_URL` at locally too — eithe
 
 ## How it's organized
 
-- `src/app/` — pages: library home (`/`), Spotify search (`/search`), album detail (`/album/[id]`), login (`/login`)
-- `src/app/api/` — route handlers: albums CRUD, listen-log CRUD, Spotify search proxy, auth
-- `src/lib/spotify.ts` — Spotify Client Credentials token fetch + catalog search
+- `src/app/` — pages: library home (`/`), saved wishlist (`/saved`), recommendations (`/recommendations`), Spotify search (`/search`), album detail (`/album/[id]`), login (`/login`)
+- `src/app/api/` — route handlers: albums CRUD, listen-log CRUD, Spotify search proxy, recommendations, auth
+- `src/lib/spotify.ts` — Spotify Client Credentials token fetch, catalog search, artist lookup, and artist-albums fetch (used for recommendations)
 - `src/lib/auth.ts`, `src/proxy.ts` — passphrase-based session cookie + route protection
-- `prisma/schema.prisma` — `Album` (rating, artwork, metadata) and `Listen` (date + note, many per album)
+- `src/hooks/useCatalogActions.ts`, `src/components/SpotifyResultCard.tsx` — shared "add to library / save for later" logic used by both the Search and Recommendations pages
+- `prisma/schema.prisma` — `Album` (rating, artwork, metadata, `status` of LIBRARY or SAVED) and `Listen` (date + note, many per album)
+
+## How recommendations work
+
+Spotify deprecated its old personalized recommendations endpoint for newer apps, so this uses a more transparent approach: it looks at the artists behind albums you've rated 7 or higher, fetches the rest of those artists' catalogs directly from Spotify, and filters out anything you already have. If a recommendation section looks thin or empty, it's usually because you haven't rated enough albums highly yet, or you already own most of that artist's catalog.
 
 ## Notes
 

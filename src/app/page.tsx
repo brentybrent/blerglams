@@ -15,7 +15,7 @@ export default function HomePage() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/albums?sort=${sort}`)
+    fetch(`/api/albums?sort=${sort}&status=library`)
       .then((res) => res.json())
       .then((data) => {
         if (!cancelled) setAlbums(data.albums ?? []);

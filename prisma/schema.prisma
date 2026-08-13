@@ -7,19 +7,27 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum AlbumStatus {
+  LIBRARY
+  SAVED
+}
+
 model Album {
-  id          String   @id @default(cuid())
-  spotifyId   String   @unique
+  id          String      @id @default(cuid())
+  spotifyId   String      @unique
   title       String
   artist      String
+  artistId    String?
   imageUrl    String?
   releaseDate String?
   spotifyUrl  String?
   rating      Int?
-  createdAt   DateTime @default(now())
+  status      AlbumStatus @default(LIBRARY)
+  createdAt   DateTime    @default(now())
   listens     Listen[]
 
   @@index([createdAt])
+  @@index([status])
 }
 
 model Listen {

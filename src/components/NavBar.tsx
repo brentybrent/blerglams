@@ -20,13 +20,19 @@ export default function NavBar() {
 
   return (
     <nav className="sticky top-0 z-10 backdrop-blur bg-base/90 border-b border-edge">
-      <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div className="max-w-5xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-y-2">
         <Link href="/" className="text-lg font-semibold tracking-tight">
           blerglams
         </Link>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Link href="/" className={linkClass("/")}>
             Library
+          </Link>
+          <Link href="/saved" className={linkClass("/saved")}>
+            Saved
+          </Link>
+          <Link href="/recommendations" className={linkClass("/recommendations")}>
+            Recommended
           </Link>
           <Link href="/search" className={linkClass("/search")}>
             Add album

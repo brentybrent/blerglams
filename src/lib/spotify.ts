@@ -61,7 +61,6 @@ export async function searchAlbums(query: string): Promise<SpotifyAlbumResult[]>
   const url = new URL("https://api.spotify.com/v1/search");
   url.searchParams.set("q", query);
   url.searchParams.set("type", "album");
-  url.searchParams.set("limit", "20");
   url.searchParams.set("market", "US");
 
   const res = await fetch(url, {

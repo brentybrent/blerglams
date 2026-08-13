@@ -9,7 +9,9 @@ export async function GET(req: NextRequest) {
       ? [{ rating: "desc" as const }, { createdAt: "desc" as const }]
       : sort === "title"
         ? [{ title: "asc" as const }]
-        : [{ createdAt: "desc" as const }];
+        : sort === "releaseDate"
+          ? [{ releaseDate: { sort: "desc" as const, nulls: "last" as const } }]
+          : [{ createdAt: "desc" as const }];
 
   const albums = await prisma.album.findMany({
     orderBy,

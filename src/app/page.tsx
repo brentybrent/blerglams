@@ -6,7 +6,7 @@ import NavBar from "@/components/NavBar";
 import AlbumCard from "@/components/AlbumCard";
 import type { Album } from "@/lib/types";
 
-type Sort = "added" | "rating" | "title";
+type Sort = "added" | "rating" | "title" | "releaseDate";
 
 export default function HomePage() {
   const [albums, setAlbums] = useState<Album[] | null>(null);
@@ -55,6 +55,7 @@ export default function HomePage() {
               <option value="added">Recently added</option>
               <option value="rating">Highest rated</option>
               <option value="title">Title A–Z</option>
+              <option value="releaseDate">Release date (newest)</option>
             </select>
           </div>
         </div>

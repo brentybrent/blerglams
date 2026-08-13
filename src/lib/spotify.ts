@@ -22,7 +22,8 @@ async function getAccessToken(): Promise<string> {
   });
 
   if (!res.ok) {
-    throw new Error(`Spotify auth failed: ${res.status}`);
+    const body = await res.text().catch(() => "");
+    throw new Error(`Spotify auth failed: ${res.status} ${body}`);
   }
 
   const data = (await res.json()) as { access_token: string; expires_in: number };
@@ -61,6 +62,7 @@ export async function searchAlbums(query: string): Promise<SpotifyAlbumResult[]>
   url.searchParams.set("q", query);
   url.searchParams.set("type", "album");
   url.searchParams.set("limit", "20");
+  url.searchParams.set("market", "US");
 
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
@@ -68,7 +70,8 @@ export async function searchAlbums(query: string): Promise<SpotifyAlbumResult[]>
   });
 
   if (!res.ok) {
-    throw new Error(`Spotify search failed: ${res.status}`);
+    const body = await res.text().catch(() => "");
+    throw new Error(`Spotify search failed: ${res.status} ${body}`);
   }
 
   const data = (await res.json()) as SpotifySearchResponse;

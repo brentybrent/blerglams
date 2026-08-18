@@ -90,8 +90,31 @@ export async function searchAlbums(query: string): Promise<SpotifyAlbumResult[]>
   return (data.albums?.items ?? []).map(mapSpotifyAlbum);
 }
 
+export type SpotifyArtist = {
+  id: string;
+  name: string;
+  genres: string[];
+  popularity: number;
+};
+
+type SpotifyRawArtist = {
+  id: string;
+  name: string;
+  genres?: string[];
+  popularity?: number;
+};
+
+function mapSpotifyArtist(item: SpotifyRawArtist): SpotifyArtist {
+  return {
+    id: item.id,
+    name: item.name,
+    genres: item.genres ?? [],
+    popularity: item.popularity ?? 0,
+  };
+}
+
 type SpotifyArtistSearchResponse = {
-  artists?: { items: Array<{ id: string; name: string }> };
+  artists?: { items: SpotifyRawArtist[] };
 };
 
 export async function searchArtistId(artistName: string): Promise<string | null> {
@@ -109,6 +132,35 @@ export async function searchArtistId(artistName: string): Promise<string | null>
 
   const data = (await res.json()) as SpotifyArtistSearchResponse;
   return data.artists?.items?.[0]?.id ?? null;
+}
+
+export async function getArtist(artistId: string): Promise<SpotifyArtist | null> {
+  const token = await getAccessToken();
+  const res = await fetch(`https://api.spotify.com/v1/artists/${artistId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+  if (!res.ok) return null;
+
+  const data = (await res.json()) as SpotifyRawArtist;
+  return mapSpotifyArtist(data);
+}
+
+export async function searchArtistsByGenre(genre: string): Promise<SpotifyArtist[]> {
+  const token = await getAccessToken();
+  const url = new URL("https://api.spotify.com/v1/search");
+  url.searchParams.set("q", `genre:"${genre}"`);
+  url.searchParams.set("type", "artist");
+  url.searchParams.set("market", "US");
+
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+  if (!res.ok) return [];
+
+  const data = (await res.json()) as SpotifyArtistSearchResponse;
+  return (data.artists?.items ?? []).map(mapSpotifyArtist);
 }
 
 type SpotifyArtistAlbumsResponse = {

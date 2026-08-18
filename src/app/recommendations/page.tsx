@@ -29,7 +29,9 @@ export default function RecommendationsPage() {
       <main className="max-w-5xl mx-auto px-4 py-6 space-y-10">
         <div>
           <h1 className="text-xl font-semibold">Recommended for you</h1>
-          <p className="text-sm text-muted mt-1">Based on artists behind albums you've rated 7 or higher.</p>
+          <p className="text-sm text-muted mt-1">
+            Artists similar to the ones behind albums you've rated 7 or higher.
+          </p>
         </div>
 
         {groups === null && !error && <p className="text-muted">Loading…</p>}
@@ -38,8 +40,8 @@ export default function RecommendationsPage() {
         {groups !== null && groups.length === 0 && !error && (
           <div className="text-center py-20 border border-dashed border-edge rounded-xl">
             <p className="text-muted">
-              Rate a few albums 7 or higher and check back — recommendations are pulled from the artists
-              behind them.
+              Rate a few albums 7 or higher and check back — recommendations are pulled from artists
+              similar to the ones behind them.
             </p>
           </div>
         )}

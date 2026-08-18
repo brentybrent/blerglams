@@ -123,7 +123,9 @@ You'll need a Postgres instance to point `DATABASE_URL` at locally too — eithe
 
 ## How recommendations work
 
-Spotify deprecated its old personalized recommendations endpoint for newer apps, so this uses a more transparent approach: it looks at the artists behind albums you've rated 7 or higher, fetches the rest of those artists' catalogs directly from Spotify, and filters out anything you already have. If a recommendation section looks thin or empty, it's usually because you haven't rated enough albums highly yet, or you already own most of that artist's catalog.
+Spotify deprecated both its old personalized recommendations endpoint and its "Related Artists" endpoint for apps created after November 2024, so this app builds similarity itself: for each artist behind an album you've rated 7 or higher, it reads that artist's genre tags from Spotify, then searches the catalog for other artists sharing those genres — ranking candidates by how many genres they share, filtering out any artist you already have music by. If an artist has no usable genre data (this happens for some very niche or new artists), that section falls back to showing more albums from the artist itself rather than nothing.
+
+If a recommendation section looks thin or empty, it's usually because you haven't rated enough albums highly yet, or genre matching didn't turn up anyone new for that artist.
 
 ## Notes
 

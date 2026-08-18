@@ -6,7 +6,7 @@ A personal album tracker: log the albums you listen to, rate them 1–10, and no
 
 - **Library** (`/`) — everything you've logged, sortable by recently added, highest rated, title, or release date
 - **Saved** (`/saved`) — a wishlist of albums you want to listen to but haven't yet; one tap moves an album to your library once you've heard it
-- **Recommended** (`/recommendations`) — more albums from the artists behind whatever you've rated 7 or higher, pulled live from Spotify's catalog, excluding anything already in your library or saved list
+- **Recommended** (`/recommendations`) — artists similar to the ones behind whatever you've rated 7 or higher, with albums pulled live from Spotify's catalog, excluding anything already in your library or saved list
 - **Add album** (`/search`) — search Spotify's full catalog and either add straight to your library or save for later
 
 ## Stack
@@ -14,6 +14,7 @@ A personal album tracker: log the albums you listen to, rate them 1–10, and no
 - Next.js (App Router) + TypeScript, deployed on [Vercel](https://vercel.com) (free tier)
 - [Postgres](https://neon.com) via [Neon](https://neon.com) (free tier) + Prisma ORM
 - Spotify Web API (Client Credentials flow) for catalog search and artwork — no user Spotify login required
+- [Last.fm API](https://www.last.fm/api) for similar-artist recommendations — free, key-only, no OAuth
 - Single shared passphrase for app access (this is a personal, single-user app)
 
 ## How Spotify integration works
@@ -32,14 +33,22 @@ Spotify's API does not expose a user's full historical listening history — onl
    - Which API/SDKs are you planning to use: check **Web API**
 3. Click **Save**, then open the app and click **Settings** to find your **Client ID** and **Client secret**. Keep this tab open — you'll paste these into Vercel shortly.
 
-## 2. Create a free Postgres database on Neon
+## 2. Get a free Last.fm API key (~2 minutes)
+
+Used only to find artists similar to the ones you've rated highly — Spotify no longer offers this for new developer apps, so Last.fm's community-driven similarity data fills the gap.
+
+1. Go to https://www.last.fm/api/account/create and sign in (or create a free Last.fm account).
+2. Fill in an application name (anything, e.g. "blerglams") and contact email. Application homepage / callback URL can be left blank or filled with any placeholder — they're not used by this app.
+3. Submit — your **API key** is shown immediately on the next page. No secret or approval wait needed.
+
+## 3. Create a free Postgres database on Neon
 
 1. Go to https://neon.com and sign up (free tier is plenty for this app).
 2. Create a new project (any name/region).
 3. On the project dashboard, copy the **connection string** (the "pooled connection" / `DATABASE_URL` shown for Prisma or generic Postgres). It looks like:
    `postgresql://user:password@ep-xxxx.neon.tech/neondb?sslmode=require`
 
-## 3. Deploy to Vercel
+## 4. Deploy to Vercel
 
 1. Push this repository to your own GitHub account (or use the one it's already in).
 2. Go to https://vercel.com, sign up/log in, and click **Add New → Project**, then import this repo.
@@ -47,9 +56,10 @@ Spotify's API does not expose a user's full historical listening history — onl
 
    | Name | Value |
    |---|---|
-   | `DATABASE_URL` | the Neon connection string from step 2 |
+   | `DATABASE_URL` | the Neon connection string from step 3 |
    | `SPOTIFY_CLIENT_ID` | from step 1 |
    | `SPOTIFY_CLIENT_SECRET` | from step 1 |
+   | `LASTFM_API_KEY` | from step 2 |
    | `APP_PASSWORD` | any passphrase you'll use to log into the app |
    | `AUTH_SECRET` | a random secret — generate one locally with `openssl rand -hex 32` |
 
@@ -64,7 +74,7 @@ Spotify's API does not expose a user's full historical listening history — onl
    This creates the `Album` and `Listen` tables. You only need to do this once (and again after any future schema change).
 6. Visit your Vercel URL — you should see the login screen. Enter the `APP_PASSWORD` you set above.
 
-## 4. Install it on your devices
+## 5. Install it on your devices
 
 Once deployed, open the Vercel URL on each device and add it to the home screen so it behaves like an app:
 
@@ -101,11 +111,13 @@ DATABASE_URL="<your Neon connection string>" npx prisma db push
 
 Either way, all your existing albums default to `status = LIBRARY`, so nothing already in your library moves or changes — this only adds the new Saved/Recommendations capability going forward.
 
+**Adding Last.fm-based recommendations to an already-deployed app:** no database change needed for this one — just get a key (see step 2 above), add `LASTFM_API_KEY` to Vercel's Environment Variables, and redeploy.
+
 ## Local development
 
 ```bash
 npm install
-cp .env.example .env.local   # fill in DATABASE_URL, SPOTIFY_CLIENT_ID/SECRET, APP_PASSWORD, AUTH_SECRET
+cp .env.example .env.local   # fill in DATABASE_URL, SPOTIFY_CLIENT_ID/SECRET, LASTFM_API_KEY, APP_PASSWORD, AUTH_SECRET
 npx prisma db push           # creates tables in your DATABASE_URL
 npm run dev                  # http://localhost:3000
 ```
@@ -116,16 +128,21 @@ You'll need a Postgres instance to point `DATABASE_URL` at locally too — eithe
 
 - `src/app/` — pages: library home (`/`), saved wishlist (`/saved`), recommendations (`/recommendations`), Spotify search (`/search`), album detail (`/album/[id]`), login (`/login`)
 - `src/app/api/` — route handlers: albums CRUD, listen-log CRUD, Spotify search proxy, recommendations, auth
-- `src/lib/spotify.ts` — Spotify Client Credentials token fetch, catalog search, artist lookup, and artist-albums fetch (used for recommendations)
+- `src/lib/spotify.ts` — Spotify Client Credentials token fetch, catalog search, artist lookup, and artist-albums fetch
+- `src/lib/lastfm.ts` — Last.fm `artist.getsimilar` lookup, the primary signal behind Recommendations
 - `src/lib/auth.ts`, `src/proxy.ts` — passphrase-based session cookie + route protection
 - `src/hooks/useCatalogActions.ts`, `src/components/SpotifyResultCard.tsx` — shared "add to library / save for later" logic used by both the Search and Recommendations pages
 - `prisma/schema.prisma` — `Album` (rating, artwork, metadata, `status` of LIBRARY or SAVED) and `Listen` (date + note, many per album)
 
 ## How recommendations work
 
-Spotify deprecated both its old personalized recommendations endpoint and its "Related Artists" endpoint for apps created after November 2024, so this app builds similarity itself: for each artist behind an album you've rated 7 or higher, it reads that artist's genre tags from Spotify, then searches the catalog for other artists sharing those genres — ranking candidates by how many genres they share, filtering out any artist you already have music by. If an artist has no usable genre data (this happens for some very niche or new artists), that section falls back to showing more albums from the artist itself rather than nothing.
+Spotify deprecated both its old personalized recommendations endpoint and its "Related Artists" endpoint for apps created after November 2024, and its per-artist genre tags turned out to be too sparse to rely on either. So for each artist behind an album you've rated 7 or higher, recommendations are found in three tiers, each tried only if the previous one comes up empty:
 
-If a recommendation section looks thin or empty, it's usually because you haven't rated enough albums highly yet, or genre matching didn't turn up anyone new for that artist.
+1. **Last.fm's `artist.getsimilar`** — real similar-artist data from Last.fm's community listening/tagging history. This is the primary source and should cover the large majority of artists.
+2. **Spotify genre-tag overlap** — a weaker fallback for the rare artist Last.fm doesn't recognize.
+3. **More albums from the artist itself** — a last resort so a section never comes up completely empty.
+
+Known artists (anyone already in your library or saved list) are always excluded, so results are genuinely new discoveries. If a section looks thin, it's usually because you haven't rated enough albums 7+ yet.
 
 ## Notes
 

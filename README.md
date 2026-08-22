@@ -41,14 +41,22 @@ Used only to find artists similar to the ones you've rated highly — Spotify no
 2. Fill in an application name (anything, e.g. "brentco") and contact email. Application homepage / callback URL can be left blank or filled with any placeholder — they're not used by this app.
 3. Submit — your **API key** is shown immediately on the next page. No secret or approval wait needed.
 
-## 3. Create a free Postgres database on Neon
+## 3. Get a free Discogs personal access token (~1 minute)
+
+Used to show community ratings on the Recommendations tab (Metacritic and RateYourMusic don't offer a public API for this; Discogs does).
+
+1. Go to https://www.discogs.com/settings/developers and sign in (or create a free Discogs account).
+2. Click **Generate new token**. It's created immediately — no app registration or approval step.
+3. Copy the token.
+
+## 4. Create a free Postgres database on Neon
 
 1. Go to https://neon.com and sign up (free tier is plenty for this app).
 2. Create a new project (any name/region).
 3. On the project dashboard, copy the **connection string** (the "pooled connection" / `DATABASE_URL` shown for Prisma or generic Postgres). It looks like:
    `postgresql://user:password@ep-xxxx.neon.tech/neondb?sslmode=require`
 
-## 4. Deploy to Vercel
+## 5. Deploy to Vercel
 
 1. Push this repository to your own GitHub account (or use the one it's already in).
 2. Go to https://vercel.com, sign up/log in, and click **Add New → Project**, then import this repo.
@@ -56,10 +64,11 @@ Used only to find artists similar to the ones you've rated highly — Spotify no
 
    | Name | Value |
    |---|---|
-   | `DATABASE_URL` | the Neon connection string from step 3 |
+   | `DATABASE_URL` | the Neon connection string from step 4 |
    | `SPOTIFY_CLIENT_ID` | from step 1 |
    | `SPOTIFY_CLIENT_SECRET` | from step 1 |
    | `LASTFM_API_KEY` | from step 2 |
+   | `DISCOGS_TOKEN` | from step 3 |
    | `APP_PASSWORD` | any passphrase you'll use to log into the app |
    | `AUTH_SECRET` | a random secret — generate one locally with `openssl rand -hex 32` |
 
@@ -74,7 +83,7 @@ Used only to find artists similar to the ones you've rated highly — Spotify no
    This creates the `Album` and `Listen` tables. You only need to do this once (and again after any future schema change).
 6. Visit your Vercel URL — you should see the login screen. Enter the `APP_PASSWORD` you set above.
 
-## 5. Install it on your devices
+## 6. Install it on your devices
 
 Once deployed, open the Vercel URL on each device and add it to the home screen so it behaves like an app:
 
@@ -111,13 +120,13 @@ DATABASE_URL="<your Neon connection string>" npx prisma db push
 
 Either way, all your existing albums default to `status = LIBRARY`, so nothing already in your library moves or changes — this only adds the new Saved/Recommendations capability going forward.
 
-**Adding Last.fm-based recommendations to an already-deployed app:** no database change needed for this one — just get a key (see step 2 above), add `LASTFM_API_KEY` to Vercel's Environment Variables, and redeploy.
+**Adding Last.fm-based recommendations, or Discogs ratings, to an already-deployed app:** no database change needed for either — just get the key/token (see steps 2 and 3 above), add `LASTFM_API_KEY` and/or `DISCOGS_TOKEN` to Vercel's Environment Variables, and redeploy.
 
 ## Local development
 
 ```bash
 npm install
-cp .env.example .env.local   # fill in DATABASE_URL, SPOTIFY_CLIENT_ID/SECRET, LASTFM_API_KEY, APP_PASSWORD, AUTH_SECRET
+cp .env.example .env.local   # fill in DATABASE_URL, SPOTIFY_CLIENT_ID/SECRET, LASTFM_API_KEY, DISCOGS_TOKEN, APP_PASSWORD, AUTH_SECRET
 npx prisma db push           # creates tables in your DATABASE_URL
 npm run dev                  # http://localhost:3000
 ```
@@ -130,6 +139,7 @@ You'll need a Postgres instance to point `DATABASE_URL` at locally too — eithe
 - `src/app/api/` — route handlers: albums CRUD, listen-log CRUD, Spotify search proxy, recommendations, auth
 - `src/lib/spotify.ts` — Spotify Client Credentials token fetch, catalog search, artist lookup, and artist-albums fetch
 - `src/lib/lastfm.ts` — Last.fm `artist.getsimilar` lookup, the primary signal behind Recommendations
+- `src/lib/discogs.ts`, `src/components/DiscogsRatingBadge.tsx` — Discogs community rating lookup, shown only on Recommendations cards
 - `src/lib/auth.ts`, `src/proxy.ts` — passphrase-based session cookie + route protection
 - `src/hooks/useCatalogActions.ts`, `src/components/SpotifyResultCard.tsx` — shared "add to library / save for later" logic used by both the Search and Recommendations pages
 - `prisma/schema.prisma` — `Album` (rating, artwork, metadata, `status` of LIBRARY or SAVED) and `Listen` (date + note, many per album)
@@ -143,6 +153,8 @@ Spotify deprecated both its old personalized recommendations endpoint and its "R
 3. **More albums from the artist itself** — a last resort so a section never comes up completely empty.
 
 Known artists (anyone already in your library or saved list) are always excluded, so results are genuinely new discoveries. If a section looks thin, it's usually because you haven't rated enough albums 7+ yet.
+
+Each recommended album also shows a **Discogs community rating** (e.g. "★ 4.2 (238) on Discogs") when one is available, fetched live per card. Metacritic and RateYourMusic don't offer a public API, so Discogs is the source here — this is a different rating pool than Metacritic's critic scores, and coverage varies (obscure releases or ones matched to a low-vote pressing may show no badge at all, or a score based on very few votes). The badge is skipped silently whenever a rating isn't found, so a missing badge doesn't mean anything is broken.
 
 ## Notes
 

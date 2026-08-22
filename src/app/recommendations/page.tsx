@@ -60,6 +60,7 @@ export default function RecommendationsPage() {
                   state={states[album.spotifyId] ?? "idle"}
                   onAddToLibrary={() => addToLibrary(album)}
                   onSaveForLater={() => saveForLater(album)}
+                  showRating
                 />
               ))}
             </div>

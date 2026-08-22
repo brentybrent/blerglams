@@ -1,17 +1,20 @@
 import Image from "next/image";
 import type { SpotifyAlbumResult } from "@/lib/spotify";
 import type { ResultAddState } from "@/hooks/useCatalogActions";
+import DiscogsRatingBadge from "@/components/DiscogsRatingBadge";
 
 export default function SpotifyResultCard({
   result,
   state,
   onAddToLibrary,
   onSaveForLater,
+  showRating = false,
 }: {
   result: SpotifyAlbumResult;
   state: ResultAddState;
   onAddToLibrary: () => void;
   onSaveForLater: () => void;
+  showRating?: boolean;
 }) {
   const busy = state === "addingLibrary" || state === "addingSaved";
   const done = state === "addedLibrary" || state === "addedSaved";
@@ -38,6 +41,7 @@ export default function SpotifyResultCard({
           <p className="font-medium leading-tight truncate">{result.title}</p>
           <p className="text-sm text-muted truncate">{result.artist}</p>
           {result.releaseDate && <p className="text-xs text-muted">{result.releaseDate.slice(0, 4)}</p>}
+          {showRating && <DiscogsRatingBadge artist={result.artist} title={result.title} />}
         </div>
 
         {done ? (

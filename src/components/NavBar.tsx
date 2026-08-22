@@ -22,7 +22,7 @@ export default function NavBar() {
     <nav className="sticky top-0 z-10 backdrop-blur bg-base/90 border-b border-edge">
       <div className="max-w-5xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-y-2">
         <Link href="/" className="text-lg font-semibold tracking-tight">
-          blerglams
+          brentco
         </Link>
         <div className="flex flex-wrap items-center gap-2">
           <Link href="/" className={linkClass("/")}>

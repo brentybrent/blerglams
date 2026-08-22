@@ -1,4 +1,4 @@
-# blerglams
+# brentco
 
 A personal album tracker: log the albums you listen to, rate them 1–10, and note when you listened. Search Spotify's catalog to add albums with artwork pulled in automatically, save albums you want to get to later, and get recommendations based on artists behind the albums you've rated highly. Works as an installable web app (PWA) on your phone, iPad, and computer.
 
@@ -19,7 +19,7 @@ A personal album tracker: log the albums you listen to, rate them 1–10, and no
 
 ## How Spotify integration works
 
-Spotify's API does not expose a user's full historical listening history — only the last ~50 played tracks, and only via a personal OAuth login. To keep this simple and avoid you having to log into Spotify inside the app, blerglams instead lets you **search Spotify's full catalog** (any album, any artist, any era) and add matches to your library with artwork and release date pulled in automatically. You then rate it and log when you listened, as many times as you like.
+Spotify's API does not expose a user's full historical listening history — only the last ~50 played tracks, and only via a personal OAuth login. To keep this simple and avoid you having to log into Spotify inside the app, brentco instead lets you **search Spotify's full catalog** (any album, any artist, any era) and add matches to your library with artwork and release date pulled in automatically. You then rate it and log when you listened, as many times as you like.
 
 ---
 
@@ -27,7 +27,7 @@ Spotify's API does not expose a user's full historical listening history — onl
 
 1. Go to https://developer.spotify.com/dashboard and log in with your Spotify account.
 2. Click **Create app**.
-   - App name: anything, e.g. "blerglams"
+   - App name: anything, e.g. "brentco"
    - App description: anything, e.g. "personal album tracker"
    - Redirect URI: not used by this app, but Spotify requires one — enter `https://example.com/callback`
    - Which API/SDKs are you planning to use: check **Web API**
@@ -38,7 +38,7 @@ Spotify's API does not expose a user's full historical listening history — onl
 Used only to find artists similar to the ones you've rated highly — Spotify no longer offers this for new developer apps, so Last.fm's community-driven similarity data fills the gap.
 
 1. Go to https://www.last.fm/api/account/create and sign in (or create a free Last.fm account).
-2. Fill in an application name (anything, e.g. "blerglams") and contact email. Application homepage / callback URL can be left blank or filled with any placeholder — they're not used by this app.
+2. Fill in an application name (anything, e.g. "brentco") and contact email. Application homepage / callback URL can be left blank or filled with any placeholder — they're not used by this app.
 3. Submit — your **API key** is shown immediately on the next page. No secret or approval wait needed.
 
 ## 3. Create a free Postgres database on Neon

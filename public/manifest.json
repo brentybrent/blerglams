@@ -1,6 +1,6 @@
 {
-  "name": "blerglams — album tracker",
-  "short_name": "blerglams",
+  "name": "brentco — album tracker",
+  "short_name": "brentco",
   "description": "Track, rate, and log the albums you listen to.",
   "start_url": "/",
   "scope": "/",

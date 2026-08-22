@@ -42,7 +42,7 @@ function LoginForm() {
         className="w-full max-w-sm bg-panel border border-edge rounded-2xl p-8 space-y-5"
       >
         <div className="space-y-1 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">blerglams</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">brentco</h1>
           <p className="text-muted text-sm">Your album log. Enter the passphrase.</p>
         </div>
         <input

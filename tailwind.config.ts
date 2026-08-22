@@ -5,13 +5,14 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        spotify: "#1DB954",
-        base: "#0b0b0d",
-        panel: "#161618",
-        panel2: "#1e1e21",
-        edge: "#2a2a2e",
-        ink: "#f2f2f0",
-        muted: "#9a9a9f",
+        accent: "#C4551E",
+        mint: "#6FB897",
+        base: "#F2E9DA",
+        panel: "#FBF6EC",
+        panel2: "#EAE0C9",
+        edge: "#C9B48C",
+        ink: "#2E2013",
+        muted: "#8A7A5E",
       },
       fontFamily: {
         sans: [

@@ -52,12 +52,12 @@ export default function HomePage() {
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
               placeholder="Filter by title or artist"
-              className="rounded-lg bg-panel border border-edge px-3 py-2 text-sm placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-spotify"
+              className="rounded-lg bg-panel border border-edge px-3 py-2 text-sm placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent"
             />
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value as Sort)}
-              className="rounded-lg bg-panel border border-edge px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-spotify"
+              className="rounded-lg bg-panel border border-edge px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
             >
               <option value="added">Recently added</option>
               <option value="rating">Highest rated</option>
@@ -79,7 +79,7 @@ export default function HomePage() {
             {albums && albums.length === 0 && (
               <Link
                 href="/search"
-                className="inline-block bg-spotify text-black font-medium px-4 py-2 rounded-lg"
+                className="inline-block bg-accent text-panel font-medium px-4 py-2 rounded-lg"
               >
                 Add your first album
               </Link>

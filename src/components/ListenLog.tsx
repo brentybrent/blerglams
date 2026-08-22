@@ -41,7 +41,7 @@ function EditListenForm({
         className="rounded-md bg-panel border border-edge px-2 py-1.5 text-sm placeholder:text-muted"
       />
       <div className="flex gap-2">
-        <button type="submit" className="text-sm font-medium bg-spotify text-black rounded-md px-3 py-1.5">
+        <button type="submit" className="text-sm font-medium bg-accent text-panel rounded-md px-3 py-1.5">
           Save
         </button>
         <button type="button" onClick={onCancel} className="text-sm text-muted px-3 py-1.5">
@@ -89,7 +89,7 @@ export default function ListenLog({
           placeholder={'Note (optional) — e.g. "road trip, on vinyl"'}
           className="flex-1 rounded-lg bg-panel border border-edge px-3 py-2 text-sm placeholder:text-muted"
         />
-        <button type="submit" className="bg-spotify text-black font-medium rounded-lg px-4 py-2 text-sm">
+        <button type="submit" className="bg-accent text-panel font-medium rounded-lg px-4 py-2 text-sm">
           Log listen
         </button>
       </form>

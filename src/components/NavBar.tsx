@@ -15,7 +15,7 @@ export default function NavBar() {
 
   const linkClass = (href: string) =>
     `px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-      pathname === href ? "bg-spotify text-black" : "text-muted hover:text-ink"
+      pathname === href ? "bg-accent text-panel" : "text-muted hover:text-ink"
     }`;
 
   return (

@@ -49,7 +49,7 @@ export default function SavedPage() {
         {albums !== null && albums.length === 0 && (
           <div className="text-center py-20 border border-dashed border-edge rounded-xl">
             <p className="text-muted mb-4">Nothing saved yet.</p>
-            <Link href="/search" className="inline-block bg-spotify text-black font-medium px-4 py-2 rounded-lg">
+            <Link href="/search" className="inline-block bg-accent text-panel font-medium px-4 py-2 rounded-lg">
               Find albums to save
             </Link>
           </div>
@@ -83,7 +83,7 @@ export default function SavedPage() {
                     <button
                       onClick={() => markAsListened(album.id)}
                       disabled={busyId === album.id}
-                      className="flex-1 text-sm font-medium rounded-lg py-2 bg-spotify text-black disabled:opacity-60"
+                      className="flex-1 text-sm font-medium rounded-lg py-2 bg-accent text-panel disabled:opacity-60"
                     >
                       Mark as listened
                     </button>

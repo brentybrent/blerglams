@@ -50,7 +50,7 @@ export default function SearchPage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search Spotify's catalog by album or artist"
-          className="w-full rounded-lg bg-panel border border-edge px-4 py-3 placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-spotify"
+          className="w-full rounded-lg bg-panel border border-edge px-4 py-3 placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent"
         />
 
         {loading && <p className="text-muted text-sm">Searching…</p>}

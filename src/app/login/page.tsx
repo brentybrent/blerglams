@@ -51,13 +51,13 @@ function LoginForm() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Passphrase"
-          className="w-full rounded-lg bg-panel2 border border-edge px-4 py-3 text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-spotify"
+          className="w-full rounded-lg bg-panel2 border border-edge px-4 py-3 text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent"
         />
         {error && <p className="text-sm text-red-400">{error}</p>}
         <button
           type="submit"
           disabled={loading || !password}
-          className="w-full rounded-lg bg-spotify text-black font-medium py-3 disabled:opacity-50"
+          className="w-full rounded-lg bg-accent text-panel font-medium py-3 disabled:opacity-50"
         >
           {loading ? "Checking…" : "Enter"}
         </button>

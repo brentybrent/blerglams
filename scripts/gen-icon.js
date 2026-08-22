@@ -7,14 +7,14 @@ const { createCanvas } = require("canvas");
 const fs = require("fs");
 const path = require("path");
 
-const GREEN = "#1DB954";
+const BEIGE = "#F2E9DA";
 const SKIN = "#E8B48C";
 const HAIR = "#6B4226";
 const HAIR_DARK = "#4A2E18";
 const FRAME = "#161616";
-const LENS = "rgba(235, 245, 250, 0.55)";
+const LENS = "rgba(250, 240, 224, 0.6)";
 const EYE = "#241a12";
-const SHIRT = "#17181A";
+const SHIRT = "#C4551E";
 const NOSE_SHADOW = "rgba(120, 70, 40, 0.28)";
 
 function roundRectPath(ctx, x, y, w, h, r) {
@@ -31,7 +31,7 @@ function drawIcon(size, { maskable = false } = {}) {
   const canvas = createCanvas(size, size);
   const ctx = canvas.getContext("2d");
 
-  ctx.fillStyle = GREEN;
+  ctx.fillStyle = BEIGE;
   ctx.fillRect(0, 0, size, size);
 
   // Maskable icons need extra padding so the shape survives being cropped

@@ -79,7 +79,7 @@ export default function AlbumDetailPage() {
         <NavBar />
         <main className="max-w-3xl mx-auto px-4 py-16 text-center">
           <p className="text-muted mb-4">Album not found.</p>
-          <Link href="/" className="text-spotify">
+          <Link href="/" className="text-accent">
             Back to library
           </Link>
         </main>
@@ -121,7 +121,7 @@ export default function AlbumDetailPage() {
                 href={album.spotifyUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-block text-sm text-spotify hover:underline"
+                className="inline-block text-sm text-accent hover:underline"
               >
                 Open in Spotify ↗
               </a>

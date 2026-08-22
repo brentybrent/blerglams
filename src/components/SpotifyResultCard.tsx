@@ -41,7 +41,7 @@ export default function SpotifyResultCard({
         </div>
 
         {done ? (
-          <p className="text-sm font-medium text-spotify text-center py-2">
+          <p className="text-sm font-medium text-accent text-center py-2">
             {state === "addedLibrary" ? "Added to library ✓" : "Saved for later ✓"}
           </p>
         ) : (
@@ -49,14 +49,14 @@ export default function SpotifyResultCard({
             <button
               onClick={onAddToLibrary}
               disabled={busy}
-              className="flex-1 text-sm font-medium rounded-lg py-2 bg-spotify text-black disabled:opacity-60"
+              className="flex-1 text-sm font-medium rounded-lg py-2 bg-accent text-panel disabled:opacity-60"
             >
               {state === "addingLibrary" ? "Adding…" : "Add"}
             </button>
             <button
               onClick={onSaveForLater}
               disabled={busy}
-              className="flex-1 text-sm font-medium rounded-lg py-2 bg-panel2 border border-edge text-ink disabled:opacity-60"
+              className="flex-1 text-sm font-medium rounded-lg py-2 bg-mint text-ink disabled:opacity-60"
             >
               {state === "addingSaved" ? "Saving…" : "Save for later"}
             </button>

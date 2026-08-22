@@ -8,7 +8,7 @@ export default function AlbumCard({ album }: { album: Album }) {
   return (
     <Link
       href={`/album/${album.id}`}
-      className="group block bg-panel border border-edge rounded-xl overflow-hidden hover:border-spotify transition-colors"
+      className="group block bg-panel border border-edge rounded-xl overflow-hidden hover:border-accent transition-colors"
     >
       <div className="relative aspect-square bg-panel2">
         {album.imageUrl ? (
@@ -25,7 +25,7 @@ export default function AlbumCard({ album }: { album: Album }) {
           </div>
         )}
         {album.rating !== null && (
-          <div className="absolute top-2 right-2 bg-black/80 text-spotify text-xs font-semibold rounded-full px-2 py-1">
+          <div className="absolute top-2 right-2 bg-black/80 text-accent text-xs font-semibold rounded-full px-2 py-1">
             {album.rating}/10
           </div>
         )}

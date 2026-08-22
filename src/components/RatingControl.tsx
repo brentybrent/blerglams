@@ -16,7 +16,7 @@ export default function RatingControl({
             onClick={() => onChange(rating === n ? null : n)}
             className={`aspect-square rounded-md text-sm font-semibold transition-colors ${
               rating !== null && n <= rating
-                ? "bg-spotify text-black"
+                ? "bg-accent text-panel"
                 : "bg-panel2 text-muted hover:text-ink"
             }`}
           >

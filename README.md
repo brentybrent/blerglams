@@ -140,6 +140,7 @@ You'll need a Postgres instance to point `DATABASE_URL` at locally too — eithe
 - `src/lib/spotify.ts` — Spotify Client Credentials token fetch, catalog search, artist lookup, and artist-albums fetch
 - `src/lib/lastfm.ts` — Last.fm `artist.getsimilar` lookup, the primary signal behind Recommendations
 - `src/lib/discogs.ts`, `src/components/DiscogsRatingBadge.tsx` — Discogs community rating lookup, shown only on Recommendations cards
+- `src/lib/recommendations.ts` — shared seed-selection and similar-artist-discovery logic used by both `/api/recommendations` and `/api/recommendations/best-of-year`
 - `src/lib/auth.ts`, `src/proxy.ts` — passphrase-based session cookie + route protection
 - `src/hooks/useCatalogActions.ts`, `src/components/SpotifyResultCard.tsx` — shared "add to library / save for later" logic used by both the Search and Recommendations pages
 - `prisma/schema.prisma` — `Album` (rating, artwork, metadata, `status` of LIBRARY or SAVED) and `Listen` (date + note, many per album)
@@ -155,6 +156,10 @@ Spotify deprecated both its old personalized recommendations endpoint and its "R
 Known artists (anyone already in your library or saved list) are always excluded, so results are genuinely new discoveries. If a section looks thin, it's usually because you haven't rated enough albums 7+ yet.
 
 Each recommended album also shows a **Discogs community rating** (e.g. "★ 4.2 (238) on Discogs") when one is available, fetched live per card. Metacritic and RateYourMusic don't offer a public API, so Discogs is the source here — this is a different rating pool than Metacritic's critic scores, and coverage varies (obscure releases or ones matched to a low-vote pressing may show no badge at all, or a score based on very few votes). The badge is skipped silently whenever a rating isn't found, so a missing badge doesn't mean anything is broken.
+
+**Recommendations refresh with variety on every visit** — which similar artists and albums surface is shuffled each time (within the best-matching candidates, so it stays relevant, not random), rather than always showing the exact same set. Hit the **Shuffle** button any time for a new set without reloading the page.
+
+**Best rated from the last year** is a separate section at the top: albums released in the past 12 months by artists related to your favorites, ranked by Discogs community rating. It's a distinct API endpoint (`/api/recommendations/best-of-year`) that runs independently of the main groups below, so if Discogs is slow to respond it only delays this one section rather than the whole page. It can come up empty if none of the currently-surfaced similar artists have released anything in the last year with a Discogs rating yet.
 
 ## Notes
 

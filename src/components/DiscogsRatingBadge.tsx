@@ -4,10 +4,22 @@ import { useEffect, useState } from "react";
 
 type Rating = { average: number; count: number };
 
-export default function DiscogsRatingBadge({ artist, title }: { artist: string; title: string }) {
-  const [rating, setRating] = useState<Rating | null | "loading">("loading");
+export default function DiscogsRatingBadge({
+  artist,
+  title,
+  precomputed,
+}: {
+  artist: string;
+  title: string;
+  /** When provided, skips the client-side fetch and renders this value directly
+   *  (or nothing, if null) — used when the server already resolved the rating. */
+  precomputed?: Rating | null;
+}) {
+  const [rating, setRating] = useState<Rating | null | "loading">(precomputed !== undefined ? precomputed : "loading");
 
   useEffect(() => {
+    if (precomputed !== undefined) return;
+
     let cancelled = false;
     setRating("loading");
 
@@ -23,7 +35,7 @@ export default function DiscogsRatingBadge({ artist, title }: { artist: string; 
     return () => {
       cancelled = true;
     };
-  }, [artist, title]);
+  }, [artist, title, precomputed]);
 
   if (rating === "loading" || rating === null) return null;
 

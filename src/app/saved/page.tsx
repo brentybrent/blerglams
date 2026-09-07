@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import NavBar from "@/components/NavBar";
 import type { Album } from "@/lib/types";
 
 export default function SavedPage() {
+  const router = useRouter();
   const [albums, setAlbums] = useState<Album[] | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -27,8 +29,7 @@ export default function SavedPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: "LIBRARY" }),
     });
-    await refresh();
-    setBusyId(null);
+    router.push(`/album/${id}`);
   }
 
   async function remove(id: string) {

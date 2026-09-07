@@ -2,7 +2,15 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Album } from "@/lib/types";
 
-export default function AlbumCard({ album }: { album: Album }) {
+export default function AlbumCard({
+  album,
+  showReleaseDate = false,
+}: {
+  album: Album;
+  /** Show the release date instead of the last-listened date — used when the
+   *  library is sorted by release date, so the sort criterion is what's visible. */
+  showReleaseDate?: boolean;
+}) {
   const lastListen = album.listens[0];
 
   return (
@@ -33,10 +41,16 @@ export default function AlbumCard({ album }: { album: Album }) {
       <div className="p-3">
         <p className="font-medium leading-tight truncate">{album.title}</p>
         <p className="text-sm text-muted truncate">{album.artist}</p>
-        {lastListen && (
-          <p className="text-xs text-muted mt-1">
-            Last listened {new Date(lastListen.listenedAt).toLocaleDateString()}
-          </p>
+        {showReleaseDate ? (
+          album.releaseDate && (
+            <p className="text-xs text-muted mt-1">Released {album.releaseDate}</p>
+          )
+        ) : (
+          lastListen && (
+            <p className="text-xs text-muted mt-1">
+              Last listened {new Date(lastListen.listenedAt).toLocaleDateString()}
+            </p>
+          )
         )}
       </div>
     </Link>

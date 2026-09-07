@@ -90,7 +90,7 @@ export default function HomePage() {
         {filtered && filtered.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {filtered.map((album) => (
-              <AlbumCard key={album.id} album={album} />
+              <AlbumCard key={album.id} album={album} showReleaseDate={sort === "releaseDate"} />
             ))}
           </div>
         )}

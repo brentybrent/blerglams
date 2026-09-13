@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import NavBar from "@/components/NavBar";
 import SpotifyResultCard from "@/components/SpotifyResultCard";
 import { useCatalogActions } from "@/hooks/useCatalogActions";
@@ -37,6 +37,20 @@ export default function RecommendationsPage() {
       .then((data) => setBestOfYear(data.albums ?? []))
       .catch(() => setBestOfYear([]));
   }, [refreshKey]);
+
+  // The two sections fetch independently, so the same album can surface in
+  // both. Prefer showing it in "Best rated from the last year" and drop it
+  // from the groups below rather than showing it twice.
+  const dedupedGroups = useMemo(() => {
+    if (!groups) return groups;
+    const shownInBestOfYear = new Set((bestOfYear ?? []).map((a) => a.spotifyId));
+    return groups
+      .map((group) => ({
+        ...group,
+        albums: group.albums.filter((a) => !shownInBestOfYear.has(a.spotifyId)),
+      }))
+      .filter((group) => group.albums.length > 0);
+  }, [groups, bestOfYear]);
 
   return (
     <div>
@@ -82,7 +96,7 @@ export default function RecommendationsPage() {
         {groups === null && !groupsError && <p className="text-muted">Loading…</p>}
         {groupsError && <p className="text-red-400 text-sm">{groupsError}</p>}
 
-        {groups !== null && groups.length === 0 && !groupsError && (!bestOfYear || bestOfYear.length === 0) && (
+        {dedupedGroups !== null && dedupedGroups.length === 0 && !groupsError && (!bestOfYear || bestOfYear.length === 0) && (
           <div className="text-center py-20 border border-dashed border-edge rounded-xl">
             <p className="text-muted">
               Rate a few albums 7 or higher and check back — recommendations are pulled from artists
@@ -91,7 +105,7 @@ export default function RecommendationsPage() {
           </div>
         )}
 
-        {groups?.map((group) => (
+        {dedupedGroups?.map((group) => (
           <section key={`${group.becauseOf.title}-${group.becauseOf.artist}`} className="space-y-3">
             <h2 className="text-sm text-muted">
               Because you rated <span className="text-ink font-medium">{group.becauseOf.title}</span> by{" "}

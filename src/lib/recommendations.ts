@@ -1,9 +1,14 @@
 import { prisma } from "@/lib/prisma";
-import { getArtist, searchArtistId, searchArtistsByGenre } from "@/lib/spotify";
+import { searchArtistId } from "@/lib/spotify";
 import { getSimilarArtists } from "@/lib/lastfm";
 
 const MAX_LASTFM_CANDIDATES = 8;
-const MAX_GENRES_PER_SEED = 3;
+
+// Last.fm match scores range 0-1. Below this, a "similar artist" is often
+// only tangentially related (or an artifact of a thin listener base for the
+// seed artist) — surfacing those produced off-genre recommendations, so
+// they're filtered out rather than treated as real similarity signal.
+const MIN_LASTFM_MATCH = 0.15;
 
 export function shuffle<T>(items: T[]): T[] {
   const copy = [...items];
@@ -49,23 +54,22 @@ export async function resolveSeedArtistId(seed: SeedAlbum): Promise<string | nul
 }
 
 /**
- * Similar-artist Spotify IDs for a seed artist, ranked best-first. Tries
- * Last.fm's real similarity data first, falling back to Spotify genre-tag
- * overlap (a weaker signal — Spotify's own tags are often sparse/missing)
- * only if Last.fm has nothing. Returns the full ranked list; callers decide
- * how many to use.
+ * Similar-artist Spotify IDs for a seed artist, ranked best-first, from
+ * Last.fm's real listening/tagging-based similarity data. Weak matches
+ * (below MIN_LASTFM_MATCH) are dropped rather than returned, since a low
+ * confidence score is often only tangentially related to the seed artist —
+ * callers should fall back to something safer (e.g. more from the seed
+ * artist itself) when this returns an empty list, rather than guessing.
+ *
+ * This used to also fall back to a Spotify genre-tag search when Last.fm had
+ * nothing, but that produced clearly wrong results: Spotify's own genre tags
+ * are often broad ("rock", "metal"), and ranking a text search for one of
+ * those by raw popularity just surfaces whatever's most mainstream under
+ * that umbrella — not a real similarity signal. Removed rather than tuned,
+ * since a popularity-ranked keyword search isn't a sound basis for "similar
+ * artist" recommendations at any threshold.
  */
 export async function findSimilarArtistIds(
-  seedArtistId: string,
-  seedArtistName: string,
-  excludeIds: Set<string>
-): Promise<string[]> {
-  const viaLastfm = await similarArtistIdsViaLastfm(seedArtistId, seedArtistName, excludeIds);
-  if (viaLastfm.length > 0) return viaLastfm;
-  return similarArtistIdsViaGenre(seedArtistId, excludeIds);
-}
-
-async function similarArtistIdsViaLastfm(
   seedArtistId: string,
   seedArtistName: string,
   excludeIds: Set<string>
@@ -74,10 +78,11 @@ async function similarArtistIdsViaLastfm(
     console.error(`getSimilarArtists failed for "${seedArtistName}"`, err);
     return [];
   });
-  if (similar.length === 0) return [];
+  const strongMatches = similar.filter((candidate) => candidate.match >= MIN_LASTFM_MATCH);
+  if (strongMatches.length === 0) return [];
 
   const resolved = await Promise.all(
-    similar.map(async (candidate) => {
+    strongMatches.map(async (candidate) => {
       const artistId = await searchArtistId(candidate.name).catch((err) => {
         console.error(`searchArtistId failed for "${candidate.name}"`, err);
         return null;
@@ -100,41 +105,4 @@ async function similarArtistIdsViaLastfm(
   }
 
   return [...bestMatchByArtist.entries()].sort(([, a], [, b]) => b - a).map(([id]) => id);
-}
-
-async function similarArtistIdsViaGenre(seedArtistId: string, excludeIds: Set<string>): Promise<string[]> {
-  const seedArtist = await getArtist(seedArtistId).catch((err) => {
-    console.error(`getArtist failed for ${seedArtistId}`, err);
-    return null;
-  });
-  const genres = (seedArtist?.genres ?? []).slice(0, MAX_GENRES_PER_SEED);
-  if (genres.length === 0) return [];
-
-  const genreResults = await Promise.all(
-    genres.map((genre) =>
-      searchArtistsByGenre(genre).catch((err) => {
-        console.error(`searchArtistsByGenre failed for "${genre}"`, err);
-        return [];
-      })
-    )
-  );
-
-  const candidates = new Map<string, { matches: number; popularity: number }>();
-  for (const results of genreResults) {
-    for (const candidate of results) {
-      if (candidate.id === seedArtistId) continue;
-      if (excludeIds.has(candidate.id)) continue;
-
-      const existing = candidates.get(candidate.id);
-      if (existing) {
-        existing.matches += 1;
-      } else {
-        candidates.set(candidate.id, { matches: 1, popularity: candidate.popularity });
-      }
-    }
-  }
-
-  return [...candidates.entries()]
-    .sort(([, a], [, b]) => b.matches - a.matches || b.popularity - a.popularity)
-    .map(([id]) => id);
 }

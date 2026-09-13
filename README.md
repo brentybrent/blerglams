@@ -147,13 +147,14 @@ You'll need a Postgres instance to point `DATABASE_URL` at locally too — eithe
 
 ## How recommendations work
 
-Spotify deprecated both its old personalized recommendations endpoint and its "Related Artists" endpoint for apps created after November 2024, and its per-artist genre tags turned out to be too sparse to rely on either. So for each artist behind an album you've rated 7 or higher, recommendations are found in three tiers, each tried only if the previous one comes up empty:
+Spotify deprecated both its old personalized recommendations endpoint and its "Related Artists" endpoint for apps created after November 2024, so for each artist behind an album you've rated 7 or higher, recommendations are found in two tiers, each tried only if the previous one comes up empty:
 
-1. **Last.fm's `artist.getsimilar`** — real similar-artist data from Last.fm's community listening/tagging history. This is the primary source and should cover the large majority of artists.
-2. **Spotify genre-tag overlap** — a weaker fallback for the rare artist Last.fm doesn't recognize.
-3. **More albums from the artist itself** — a last resort so a section never comes up completely empty.
+1. **Last.fm's `artist.getsimilar`** — real similar-artist data from Last.fm's community listening/tagging history, filtered to a minimum confidence score so weak/tangential matches don't slip through. This is the primary source and should cover the large majority of artists.
+2. **More albums from the artist itself** — a last resort so a section never comes up completely empty.
 
-Known artists (anyone already in your library or saved list) are always excluded, so results are genuinely new discoveries. If a section looks thin, it's usually because you haven't rated enough albums 7+ yet.
+An earlier version also fell back to a Spotify genre-tag search when Last.fm had nothing, but that produced clearly wrong results — Spotify's own genre tags are often broad ("rock", "metal"), and ranking a text search for one of those by raw popularity just surfaces whatever's most mainstream under that umbrella, regardless of actual similarity. It was removed rather than tuned, since a popularity-ranked keyword search isn't a sound basis for "similar artist" matching at any threshold.
+
+Known artists (anyone already in your library or saved list) are always excluded, so results are genuinely new discoveries. The "Best rated from the last year" section and the "Because you rated X" groups below it fetch independently and are de-duplicated against each other client-side, so the same album won't show up in both. If a section looks thin, it's usually because you haven't rated enough albums 7+ yet.
 
 Each recommended album also shows a **Discogs community rating** (e.g. "★ 4.2 (238) on Discogs") when one is available, fetched live per card. Metacritic and RateYourMusic don't offer a public API, so Discogs is the source here — this is a different rating pool than Metacritic's critic scores, and coverage varies (obscure releases or ones matched to a low-vote pressing may show no badge at all, or a score based on very few votes). The badge is skipped silently whenever a rating isn't found, so a missing badge doesn't mean anything is broken.
 

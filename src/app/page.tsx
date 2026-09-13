@@ -38,32 +38,39 @@ export default function HomePage() {
     <div>
       <NavBar />
       <main className="max-w-5xl mx-auto px-4 py-6 space-y-6">
-        <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+        <div className="flex flex-col md:flex-row gap-4 md:items-end md:justify-between">
           <div>
             <h1 className="text-xl font-semibold">2026 Listens</h1>
             {albums && (
-              <p className="text-sm text-muted">
+              <p className="text-sm text-muted flex items-center gap-1.5 mt-0.5">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-mint" />
                 {albums.length} {albums.length === 1 ? "album" : "albums"}
               </p>
             )}
           </div>
-          <div className="flex gap-2">
-            <input
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              placeholder="Filter by title or artist"
-              className="rounded-lg bg-panel border border-edge px-3 py-2 text-sm placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent"
-            />
-            <select
-              value={sort}
-              onChange={(e) => setSort(e.target.value as Sort)}
-              className="rounded-lg bg-panel border border-edge px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
-            >
-              <option value="added">Recently added</option>
-              <option value="rating">Highest rated</option>
-              <option value="title">Title A–Z</option>
-              <option value="releaseDate">Release date (newest)</option>
-            </select>
+          <div className="flex flex-col sm:flex-row gap-3 bg-panel border border-edge rounded-xl p-3">
+            <label className="flex flex-col gap-1 text-xs font-medium text-muted uppercase tracking-wide">
+              Filter
+              <input
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                placeholder="Title or artist"
+                className="normal-case font-normal text-sm rounded-lg bg-panel2 border border-edge px-3 py-2 text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-mint"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-xs font-medium text-muted uppercase tracking-wide">
+              Sort by
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value as Sort)}
+                className="normal-case font-normal text-sm rounded-lg bg-panel2 border border-edge px-3 py-2 text-ink focus:outline-none focus:ring-2 focus:ring-accent"
+              >
+                <option value="added">Recently added</option>
+                <option value="rating">Highest rated</option>
+                <option value="title">Title A–Z</option>
+                <option value="releaseDate">Release date (newest)</option>
+              </select>
+            </label>
           </div>
         </div>
 

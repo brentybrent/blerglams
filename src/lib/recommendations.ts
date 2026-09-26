@@ -1,13 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import { searchArtistId } from "@/lib/spotify";
-import { getSimilarArtists } from "@/lib/lastfm";
+import { getSimilarArtists, getTopTags } from "@/lib/lastfm";
 
 const MAX_LASTFM_CANDIDATES = 8;
 
 // Last.fm match scores range 0-1. Below this, a "similar artist" is often
 // only tangentially related (or an artifact of a thin listener base for the
-// seed artist) — surfacing those produced off-genre recommendations, so
-// they're filtered out rather than treated as real similarity signal.
+// seed artist) — kept as a first-pass filter, but genre-fit scoring (below)
+// is what actually guards against off-taste recommendations now, since this
+// threshold alone wasn't a strong enough guardrail on its own.
 const MIN_LASTFM_MATCH = 0.15;
 
 // Only ratings at or above this count as positive taste signal for building
@@ -18,7 +19,7 @@ const MIN_SEED_RATING = 6;
 // How many of your rated albums to pull when building the taste profile.
 // Higher = a more complete picture of your library, at the cost of more
 // artist-resolution lookups.
-const MAX_SEED_ALBUMS = 30;
+const MAX_SEED_ALBUMS = 40;
 
 export function shuffle<T>(items: T[]): T[] {
   const copy = [...items];
@@ -105,13 +106,13 @@ export async function getWeightedSeedArtists(limit = MAX_SEED_ALBUMS): Promise<W
     .sort((a, b) => b.weight - a.weight);
 }
 
-export type SimilarArtistMatch = { artistId: string; match: number };
+export type SimilarArtistMatch = { artistId: string; name: string; match: number };
 
 /**
  * Similar-artist candidates for a seed artist, ranked best-first, with their
- * Last.fm match scores intact so callers can combine them with a seed's
- * taste-profile weight (match x weight) rather than treating every seed as
- * equally important.
+ * Last.fm match scores and canonical names intact (the name is needed
+ * downstream to look up the candidate's own genre tags for fit-scoring,
+ * without a second Spotify round-trip).
  *
  * This used to also fall back to a Spotify genre-tag search when Last.fm had
  * nothing, but that produced clearly wrong results: Spotify's own genre tags
@@ -139,24 +140,65 @@ export async function findSimilarArtists(
         console.error(`searchArtistId failed for "${candidate.name}"`, err);
         return null;
       });
-      return artistId ? { artistId, match: candidate.match } : null;
+      return artistId ? { artistId, name: candidate.name, match: candidate.match } : null;
     })
   );
 
   // Multiple Last.fm names can resolve to the same Spotify artist — dedupe,
   // keeping the best match score seen for each.
-  const bestMatchByArtist = new Map<string, number>();
+  const bestByArtist = new Map<string, { name: string; match: number }>();
   for (const r of resolved) {
     if (!r) continue;
     if (r.artistId === seedArtistId) continue;
     if (excludeIds.has(r.artistId)) continue;
-    const current = bestMatchByArtist.get(r.artistId);
-    if (current === undefined || r.match > current) {
-      bestMatchByArtist.set(r.artistId, r.match);
+    const current = bestByArtist.get(r.artistId);
+    if (current === undefined || r.match > current.match) {
+      bestByArtist.set(r.artistId, { name: r.name, match: r.match });
     }
   }
 
-  return [...bestMatchByArtist.entries()]
-    .map(([artistId, match]) => ({ artistId, match }))
+  return [...bestByArtist.entries()]
+    .map(([artistId, v]) => ({ artistId, ...v }))
     .sort((a, b) => b.match - a.match);
+}
+
+export type TagProfile = Map<string, number>;
+
+/**
+ * A single artist's genre-tag fingerprint from Last.fm's community tagging
+ * (artist.gettoptags), normalized to 0-1 per tag. This is a different use of
+ * genre data than the removed Spotify genre-tag search: it's never used to
+ * drive a broad catalog search (the thing that let popularity dominate
+ * before) — only to compare one specific artist's tags against your
+ * aggregate taste profile.
+ */
+export async function getArtistTagProfile(artistName: string): Promise<TagProfile> {
+  const tags = await getTopTags(artistName).catch((err) => {
+    console.error(`getTopTags failed for "${artistName}"`, err);
+    return [];
+  });
+  return new Map(tags.map((t) => [t.tag, t.weight]));
+}
+
+/** Adds a weighted artist tag profile into an aggregate profile, in place. */
+export function mergeTagProfile(target: TagProfile, tags: TagProfile, seedWeight: number): void {
+  for (const [tag, weight] of tags) {
+    target.set(tag, (target.get(tag) ?? 0) + weight * seedWeight);
+  }
+}
+
+/**
+ * How well a candidate's own tags overlap with your aggregate weighted taste
+ * profile — a dot-product over shared tags. Zero means no shared tags at
+ * all, the strongest signal that a candidate genuinely doesn't fit your
+ * taste regardless of how strongly Last.fm claims it's "similar" to one
+ * specific seed artist.
+ */
+export function scoreTagOverlap(candidateTags: TagProfile, profile: TagProfile): number {
+  let score = 0;
+  for (const [tag, weight] of candidateTags) {
+    const profileWeight = profile.get(tag);
+    if (profileWeight) score += weight * profileWeight;
+  }
+  return score;
 }

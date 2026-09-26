@@ -1,19 +1,33 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getArtistAlbums, type SpotifyAlbumResult } from "@/lib/spotify";
-import { getWeightedSeedArtists, findSimilarArtists, shuffle, type SeedAlbum } from "@/lib/recommendations";
+import {
+  getWeightedSeedArtists,
+  findSimilarArtists,
+  getArtistTagProfile,
+  mergeTagProfile,
+  scoreTagOverlap,
+  shuffle,
+  type SeedAlbum,
+  type TagProfile,
+} from "@/lib/recommendations";
 
 // How many of your top-weighted artists we bother querying Last.fm for.
 // Aggregating across more of your profile gives a fuller picture of your
 // taste, at the cost of more (fully parallel) outbound requests per load.
-const MAX_SEEDS_QUERIED = 8;
+const MAX_SEEDS_QUERIED = 10;
 
-// Candidates are ranked by weighted score, then this many of the best are
-// shuffled before picking the final set — so recommendations stay grounded
-// in your actual weighted taste (never pulling from a low-relevance tail)
+// Of the raw-score-ranked candidates, how many get a genre-tag lookup for
+// fit-scoring against your aggregate profile. Bounded separately from the
+// raw candidate count since Last.fm calls aren't free.
+const GENRE_FIT_SHORTLIST = 15;
+
+// After genre-fit scoring, the best-scoring candidates are shuffled from
+// this pool before the final pick — so recommendations stay grounded in
+// your actual weighted taste (never pulling from a low-relevance tail)
 // while the Shuffle button still has a meaningfully different pool to draw
 // a fresh set from each time.
-const QUALIFIED_POOL_SIZE = 16;
+const QUALIFIED_POOL_SIZE = 12;
 const MAX_RESULT_ARTISTS = 6;
 
 const MAX_ALBUMS_PER_ARTIST = 2;
@@ -25,6 +39,7 @@ type RecommendationGroup = {
 };
 
 type Candidate = {
+  name: string;
   score: number;
   bestSeed: SeedAlbum;
   bestContribution: number;
@@ -45,22 +60,29 @@ export async function GET() {
 
   const topSeeds = seedArtists.slice(0, MAX_SEEDS_QUERIED);
 
-  // Query Last.fm for every seed artist in parallel, then combine each
-  // candidate's match score with the seed's taste-profile weight — so an
-  // artist similar to several things you love (or very similar to one thing
-  // you love a lot) rises to the top, rather than treating a few isolated
-  // top-rated albums as independent recommendation sources.
+  // For every seed artist, in parallel: find similar artists (Last.fm) AND
+  // fetch its own genre tags — the tags build your aggregate taste profile
+  // (the "lake"), which every candidate then has to actually fit, rather
+  // than surfacing anything a single seed's neighbor list happens to include.
   const perSeedResults = await Promise.all(
     topSeeds.map(async (seed) => {
       const seedArtistName = seed.representativeAlbum.artist.split(",")[0].trim();
-      const similar = await findSimilarArtists(seed.artistId, seedArtistName, knownArtistIds);
-      return { seed, similar };
+      const [similar, tags] = await Promise.all([
+        findSimilarArtists(seed.artistId, seedArtistName, knownArtistIds),
+        getArtistTagProfile(seedArtistName),
+      ]);
+      return { seed, similar, tags };
     })
   );
 
+  const genreProfile: TagProfile = new Map();
+  for (const { seed, tags } of perSeedResults) {
+    mergeTagProfile(genreProfile, tags, seed.weight);
+  }
+
   const candidates = new Map<string, Candidate>();
   for (const { seed, similar } of perSeedResults) {
-    for (const { artistId, match } of similar) {
+    for (const { artistId, name, match } of similar) {
       const contribution = seed.weight * match;
       const existing = candidates.get(artistId);
       if (existing) {
@@ -71,6 +93,7 @@ export async function GET() {
         }
       } else {
         candidates.set(artistId, {
+          name,
           score: contribution,
           bestSeed: seed.representativeAlbum,
           bestContribution: contribution,
@@ -79,13 +102,34 @@ export async function GET() {
     }
   }
 
-  const qualifiedPool = [...candidates.entries()]
-    .sort(([, a], [, b]) => b.score - a.score)
-    .slice(0, QUALIFIED_POOL_SIZE);
+  const shortlist = [...candidates.entries()].sort(([, a], [, b]) => b.score - a.score).slice(0, GENRE_FIT_SHORTLIST);
+
+  // Require candidates to actually share some genre ground with your
+  // profile — this is the real guardrail against a lucky-but-unrelated
+  // match from a single seed slipping through on raw similarity score alone.
+  const withGenreFit = await Promise.all(
+    shortlist.map(async ([artistId, info]) => {
+      const tags = await getArtistTagProfile(info.name);
+      const fit = scoreTagOverlap(tags, genreProfile);
+      return { artistId, info, fit };
+    })
+  );
+
+  const genreFiltered = withGenreFit.filter((c) => c.fit > 0);
+  // If genre data was unavailable across the board (rather than genuinely no
+  // overlap), fall back to the raw shortlist so a Last.fm hiccup doesn't
+  // wipe out the whole page.
+  const finalCandidates = genreFiltered.length > 0 ? genreFiltered : withGenreFit;
+
+  const ranked = finalCandidates
+    .map((c) => ({ ...c, combinedScore: c.info.score * (1 + c.fit) }))
+    .sort((a, b) => b.combinedScore - a.combinedScore);
+
+  const qualifiedPool = ranked.slice(0, QUALIFIED_POOL_SIZE);
   const topArtists = shuffle(qualifiedPool).slice(0, MAX_RESULT_ARTISTS);
 
   const albumsByArtist = await Promise.all(
-    topArtists.map(async ([artistId]) => {
+    topArtists.map(async ({ artistId }) => {
       const albums = await getArtistAlbums(artistId).catch((err) => {
         console.error(`getArtistAlbums failed for ${artistId}`, err);
         return [] as SpotifyAlbumResult[];
@@ -97,7 +141,7 @@ export async function GET() {
   const groups: RecommendationGroup[] = [];
   const groupIndexBySeedId = new Map<string, number>();
 
-  for (const [artistId, info] of topArtists) {
+  for (const { artistId, info } of topArtists) {
     const albumsForArtist = albumsByArtist.find((a) => a.artistId === artistId)?.albums ?? [];
     if (albumsForArtist.length === 0) continue;
 

@@ -9,7 +9,6 @@ export default function SpotifyResultCard({
   onAddToLibrary,
   onSaveForLater,
   showRating = false,
-  precomputedRating,
 }: {
   result: SpotifyAlbumResult;
   state: ResultAddState;
@@ -17,8 +16,6 @@ export default function SpotifyResultCard({
   onSaveForLater: () => void;
   /** Lazily fetches and shows a Discogs rating for this album. */
   showRating?: boolean;
-  /** Already-known rating (e.g. resolved server-side) — skips the fetch entirely. */
-  precomputedRating?: { average: number; count: number } | null;
 }) {
   const busy = state === "addingLibrary" || state === "addingSaved";
   const done = state === "addedLibrary" || state === "addedSaved";
@@ -45,9 +42,7 @@ export default function SpotifyResultCard({
           <p className="font-medium leading-tight truncate">{result.title}</p>
           <p className="text-sm text-muted truncate">{result.artist}</p>
           {result.releaseDate && <p className="text-xs text-muted">{result.releaseDate.slice(0, 4)}</p>}
-          {(showRating || precomputedRating !== undefined) && (
-            <DiscogsRatingBadge artist={result.artist} title={result.title} precomputed={precomputedRating} />
-          )}
+          {showRating && <DiscogsRatingBadge artist={result.artist} title={result.title} />}
         </div>
 
         {done ? (

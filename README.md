@@ -140,21 +140,24 @@ You'll need a Postgres instance to point `DATABASE_URL` at locally too — eithe
 - `src/lib/spotify.ts` — Spotify Client Credentials token fetch, catalog search, artist lookup, and artist-albums fetch
 - `src/lib/lastfm.ts` — Last.fm `artist.getsimilar` lookup, the primary signal behind Recommendations
 - `src/lib/discogs.ts`, `src/components/DiscogsRatingBadge.tsx` — Discogs community rating lookup, shown only on Recommendations cards
-- `src/lib/recommendations.ts` — shared seed-selection and similar-artist-discovery logic used by both `/api/recommendations` and `/api/recommendations/best-of-year`
+- `src/lib/recommendations.ts` — builds the weighted taste profile (`getWeightedSeedArtists`) and similar-artist lookup (`findSimilarArtists`) shared by both `/api/recommendations` and `/api/recommendations/best-of-year`
 - `src/lib/auth.ts`, `src/proxy.ts` — passphrase-based session cookie + route protection
 - `src/hooks/useCatalogActions.ts`, `src/components/SpotifyResultCard.tsx` — shared "add to library / save for later" logic used by both the Search and Recommendations pages
 - `prisma/schema.prisma` — `Album` (rating, artwork, metadata, `status` of LIBRARY or SAVED) and `Listen` (date + note, many per album)
 
 ## How recommendations work
 
-Spotify deprecated both its old personalized recommendations endpoint and its "Related Artists" endpoint for apps created after November 2024, so for each artist behind an album you've rated 7 or higher, recommendations are found in two tiers, each tried only if the previous one comes up empty:
+Spotify deprecated both its old personalized recommendations endpoint and its "Related Artists" endpoint for apps created after November 2024, so this app builds its own similarity signal from Last.fm's `artist.getsimilar` (real listening/tagging-based similarity data, filtered to a minimum confidence score so weak/tangential matches don't slip through).
 
-1. **Last.fm's `artist.getsimilar`** — real similar-artist data from Last.fm's community listening/tagging history, filtered to a minimum confidence score so weak/tangential matches don't slip through. This is the primary source and should cover the large majority of artists.
-2. **More albums from the artist itself** — a last resort so a section never comes up completely empty.
+Recommendations are based on a **weighted profile of your whole rated library**, not a few individually-picked albums treated as isolated seeds. Every album you've rated 6 or higher contributes `(rating - 5)` points of weight to its artist — so a 9 counts more than a 6, and several albums you love by the same artist compound into a stronger signal for that artist. Last.fm is then queried for every one of your top-weighted artists in parallel, and each similar-artist candidate's match score is combined with its seed's weight (`match × weight`) into one aggregate score per candidate — so an artist similar to several things you love, or very similar to one thing you love a lot, rises to the top, rather than a few isolated favorites each generating their own independent, disconnected section.
+
+The best-scoring candidates are shuffled before the final pick, so the Shuffle button still surfaces a genuinely different set each time — but only from within that qualified, taste-weighted pool, never from low-relevance stragglers. Each recommended artist is still attributed to whichever of your rated albums contributed the most to its score, so the "Because you rated X" framing is preserved even though the underlying selection is now a whole-library aggregate. If nothing scores at all (rare — usually means Last.fm doesn't recognize any of your top artists), it falls back to more from your single highest-weighted artist so the page isn't empty.
+
+This first version only uses positive signal (ratings 6+) — low ratings aren't yet used to actively deprioritize similar artists. That's a reasonable next refinement if recommendations still feel off.
 
 An earlier version also fell back to a Spotify genre-tag search when Last.fm had nothing, but that produced clearly wrong results — Spotify's own genre tags are often broad ("rock", "metal"), and ranking a text search for one of those by raw popularity just surfaces whatever's most mainstream under that umbrella, regardless of actual similarity. It was removed rather than tuned, since a popularity-ranked keyword search isn't a sound basis for "similar artist" matching at any threshold.
 
-Known artists (anyone already in your library or saved list) are always excluded, so results are genuinely new discoveries. The "Best rated from the last year" section and the "Because you rated X" groups below it fetch independently and are de-duplicated against each other client-side, so the same album won't show up in both. If a section looks thin, it's usually because you haven't rated enough albums 7+ yet.
+Known artists (anyone already in your library or saved list) are always excluded, so results are genuinely new discoveries. The "Best rated from the last year" section and the "Because you rated X" groups below it fetch independently and are de-duplicated against each other client-side, so the same album won't show up in both. If a section looks thin, it's usually because you haven't rated enough albums 6+ yet.
 
 Each recommended album also shows a **Discogs community rating** (e.g. "★ 4.2 (238) on Discogs") when one is available, fetched live per card. Metacritic and RateYourMusic don't offer a public API, so Discogs is the source here — this is a different rating pool than Metacritic's critic scores, and coverage varies (obscure releases or ones matched to a low-vote pressing may show no badge at all, or a score based on very few votes). The badge is skipped silently whenever a rating isn't found, so a missing badge doesn't mean anything is broken.
 

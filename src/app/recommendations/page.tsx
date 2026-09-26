@@ -60,8 +60,8 @@ export default function RecommendationsPage() {
           <div>
             <h1 className="text-xl font-semibold">Recommended for you</h1>
             <p className="text-sm text-muted mt-1">
-              Artists similar to the ones behind albums you've rated 7 or higher. Reshuffles each visit —
-              hit shuffle for a new set any time.
+              Based on a weighted profile of everything you've rated 6 or higher — not just a few picks.
+              Reshuffles each visit — hit shuffle for a new set any time.
             </p>
           </div>
           <button
@@ -99,8 +99,8 @@ export default function RecommendationsPage() {
         {dedupedGroups !== null && dedupedGroups.length === 0 && !groupsError && (!bestOfYear || bestOfYear.length === 0) && (
           <div className="text-center py-20 border border-dashed border-edge rounded-xl">
             <p className="text-muted">
-              Rate a few albums 7 or higher and check back — recommendations are pulled from artists
-              similar to the ones behind them.
+              Rate a few albums 6 or higher and check back — recommendations are built from a weighted
+              profile of your library.
             </p>
           </div>
         )}

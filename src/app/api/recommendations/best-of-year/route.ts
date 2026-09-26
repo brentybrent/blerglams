@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getArtistAlbums, type SpotifyAlbumResult } from "@/lib/spotify";
 import { getAlbumRating, type DiscogsRating } from "@/lib/discogs";
-import { getRatedSeedAlbums, resolveSeedArtistId, findSimilarArtistIds, shuffle } from "@/lib/recommendations";
+import { getWeightedSeedArtists, findSimilarArtists, shuffle } from "@/lib/recommendations";
 
 // This is a separate, independently-timing-out endpoint from the main
 // /api/recommendations route on purpose: it does its own round of Discogs
@@ -10,7 +10,7 @@ import { getRatedSeedAlbums, resolveSeedArtistId, findSimilarArtistIds, shuffle 
 // Last.fm calls, so if Discogs is slow or rate-limited, it only delays this
 // section — the main recommendation groups load unaffected.
 
-const MAX_SEED_ARTISTS = 4;
+const MAX_SEEDS_QUERIED = 6;
 const MAX_SIMILAR_ARTISTS_PER_SEED = 3;
 const MAX_RATING_LOOKUPS = 8; // caps Discogs calls to 2x this per request
 const MAX_RESULTS = 5;
@@ -19,31 +19,29 @@ const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
 export type BestOfYearAlbum = SpotifyAlbumResult & { discogsRating: DiscogsRating };
 
 export async function GET() {
-  const rated = shuffle(await getRatedSeedAlbums());
-  if (rated.length === 0) {
+  const seedArtists = await getWeightedSeedArtists();
+  if (seedArtists.length === 0) {
     return NextResponse.json({ albums: [] });
   }
 
   const owned = await prisma.album.findMany({ select: { spotifyId: true, artistId: true } });
   const ownedAlbumIds = new Set(owned.map((a) => a.spotifyId));
-  const knownArtistIds = new Set(owned.map((a) => a.artistId).filter((id): id is string => Boolean(id)));
+  const knownArtistIds = new Set([
+    ...owned.map((a) => a.artistId).filter((id): id is string => Boolean(id)),
+    ...seedArtists.map((s) => s.artistId),
+  ]);
 
-  const seenSeedArtists = new Set<string>();
-  const candidateArtistIds = new Set<string>();
+  const topSeeds = seedArtists.slice(0, MAX_SEEDS_QUERIED);
 
-  for (const seed of rated) {
-    if (seenSeedArtists.size >= MAX_SEED_ARTISTS) break;
+  const perSeedSimilar = await Promise.all(
+    topSeeds.map(async (seed) => {
+      const seedArtistName = seed.representativeAlbum.artist.split(",")[0].trim();
+      const similar = await findSimilarArtists(seed.artistId, seedArtistName, knownArtistIds);
+      return similar.slice(0, MAX_SIMILAR_ARTISTS_PER_SEED).map((s) => s.artistId);
+    })
+  );
 
-    const seedArtistId = await resolveSeedArtistId(seed);
-    if (!seedArtistId || seenSeedArtists.has(seedArtistId)) continue;
-    seenSeedArtists.add(seedArtistId);
-    knownArtistIds.add(seedArtistId);
-
-    const primaryArtistName = seed.artist.split(",")[0].trim();
-    const excludeIds = new Set([...knownArtistIds, ...candidateArtistIds]);
-    const similarIds = await findSimilarArtistIds(seedArtistId, primaryArtistName, excludeIds);
-    similarIds.slice(0, MAX_SIMILAR_ARTISTS_PER_SEED).forEach((id) => candidateArtistIds.add(id));
-  }
+  const candidateArtistIds = new Set(perSeedSimilar.flat());
 
   if (candidateArtistIds.size === 0) {
     return NextResponse.json({ albums: [] });
